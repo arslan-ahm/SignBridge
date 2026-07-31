@@ -1,100 +1,89 @@
-# SignBridge — Mobile App
+# 📱 SignBridge — The Phone App
 
-Expo (React Native + TypeScript) app for the SignBridge hackathon project.
-Two flows from a single home screen:
+This is the mobile version of SignBridge, built with **Expo** (React Native + TypeScript). One home screen, two doors to walk through. 🚪🚪
 
-- **Understand Sign** — live camera view that periodically captures frames,
-  sends them to a recognition backend, shows the live-recognized sign,
-  accumulates a sentence buffer, builds a natural sentence, and speaks it
-  aloud with on-device TTS.
-- **Speak with Sign** — type a sentence and see each word rendered as a
-  sign card in sequence, with a "sign not available yet" fallback for
-  out-of-vocabulary words.
+```mermaid
+flowchart TD
+    Home["🏠 Home Screen"] --> A["🎥 Understand Sign"]
+    Home --> B["✍️ Speak with Sign"]
+    A --> A1["Camera watches your hands<br/>→ shows the word<br/>→ builds a sentence<br/>→ speaks it 🔊"]
+    B --> B1["Type a sentence<br/>→ see each word as<br/>a sign card 🖼️"]
+```
 
-## Running it
+---
+
+## ▶️ How to Run It
 
 ```bash
 npm install
 npx expo start
 ```
 
-Scan the QR code with Expo Go (iOS/Android) or press `a` / `i` for an
-emulator/simulator. Camera features require a physical device or a
-simulator with camera support — Expo Go on a real phone is the fastest way
-to demo "Understand Sign".
+Then either:
+- 📷 Scan the QR code with the **Expo Go** app on your phone (best way to test the camera!), or
+- ⌨️ Press `a` for an Android emulator, or `i` for an iOS simulator.
 
-Typecheck: `npx tsc --noEmit` (passes clean as of this commit).
+Want to double check the code is healthy? Run `npx tsc --noEmit` — it should print nothing (that means "all good ✅").
 
-## Backend: mock mode vs. real API
+---
 
-All backend calls live in [`services/api.ts`](./services/api.ts) behind a
-single toggle:
+## 🎭 Real Mode vs. Pretend Mode
+
+Right now the app is running in **pretend mode** (we call it "mock mode"). It fakes the answers so you can click around and see everything working today, even though the real brain isn't plugged in yet. Think of it like a dress rehearsal. 🎬
+
+Everything lives in one file: [`services/api.ts`](./services/api.ts)
 
 ```ts
-export const API_BASE_URL = 'http://localhost:7860'; // TODO: real HF Spaces URL
-export const IS_MOCK = true; // TODO: flip to false once the backend is live
+export const API_BASE_URL = 'http://localhost:7860'; // 👉 put the real backend link here
+export const IS_MOCK = true;                          // 👉 flip to false when ready
 ```
 
-**To wire up the real backend:**
-1. Set `API_BASE_URL` to the deployed backend URL (e.g. a Hugging Face
-   Spaces URL like `https://your-username-signbridge.hf.space`).
-2. Set `IS_MOCK = false`.
-3. Make sure the backend implements:
-   - `POST {API_BASE_URL}/predict` with body `{ image_base64: string }`,
-     returning `{ label: string, confidence: number }`.
-   - `POST {API_BASE_URL}/sentence` with body `{ words: string[] }`,
-     returning `{ sentence: string }`.
+### 🔌 To connect the real brain:
 
-No other code needs to change — `recognizeFrame()` and `buildSentence()`
-already contain the real `fetch` calls, they're just short-circuited by
-`IS_MOCK` today so the app is fully demoable before the backend exists.
+1. Put the real backend's web address into `API_BASE_URL`.
+2. Change `IS_MOCK` to `false`.
+3. Make sure that backend answers these two questions the same way:
 
-## What's implemented vs. stubbed
+| Question we ask | What we send | What we expect back |
+|---|---|---|
+| "What sign is this?" → `POST /predict` | `{ image_base64 }` | `{ label, confidence }` |
+| "Make these words a sentence" → `POST /sentence` | `{ words }` | `{ sentence }` |
 
-Implemented:
-- Home screen with two large option cards, light/dark theme support
-  matching the team's brand palette (teal accent `#0E9C8F` / `#28C4B4`).
-- Understand Sign: `expo-camera` live preview, permission handling,
-  periodic frame capture + recognition (mocked), running sentence buffer,
-  "Build sentence" (`/sentence`, mocked) and "Speak" (`expo-speech`, fully
-  real/local — no backend needed).
-- Speak with Sign: text input, word-by-word sign card rendering, sequential
-  "Play" animation that highlights the active card, graceful fallback for
-  unknown words.
-- Small, swappable vocabulary list at [`data/vocabulary.ts`](./data/vocabulary.ts) —
-  add `{ word, illustration }` entries here once the team finalizes the
-  trained sign list. Illustrations are emoji placeholders (deliberately not
-  scraped/copyrighted sign images); swap in original artwork later without
-  touching screen code.
+That's it — no other code needs to change! The real network calls are already written, just waiting to be switched on. 🔦
 
-Stubbed / cut for time (documented, not hidden):
-- **Backend calls are mocked** (see above) — real backend doesn't exist yet.
-- **Voice-to-text input** on the Speak with Sign screen was cut. Expo has
-  no low-friction managed-workflow speech-to-text API without adding a
-  native module + config plugin, which was too much risk for the remaining
-  time budget. Noted as a fast-follow; text input covers the same flow today.
-- Recognized-sign labels from the mock/recognition endpoint are lowercase
-  words (e.g. `hello`, `thank you`) chosen to line up with the vocabulary
-  list, but the real model's label set may differ — a teammate should
-  confirm label strings match (or add a small mapping layer) once the real
-  backend is live.
+> 🚧 **Heads up:** the live [Streamlit demo](https://signbridge-asl.streamlit.app/) is a full web page, not this kind of simple API — so it can't be plugged in here as-is yet. Someone on the team needs to wrap the model in a tiny API (like the `/predict` and `/sentence` shape above) before this toggle can go live for real.
 
-## Project structure
+---
+
+## ✅ What Already Works vs. 🚧 What's Not Done Yet
+
+**✅ Ready to show off:**
+- 🏠 Home screen with two big buttons, light & dark mode, matching SignBridge's teal color theme
+- 🎥 **Understand Sign**: camera preview, asks for permission nicely, keeps a running list of signs, "Build sentence" button, and "🔊 Speak" which *really* talks out loud (no internet needed for that part!)
+- ✍️ **Speak with Sign**: type words, watch them turn into little sign cards one by one, friendly "not learned yet 🤷" message for unknown words
+- 🗂️ A simple word-list file ([`data/vocabulary.ts`](./data/vocabulary.ts)) that's easy to add more words to later
+
+**🚧 Still pretend / cut for time:**
+- The camera and sentence-builder answers are **faked** until a real backend is wired up (see above)
+- 🎙️ Speaking *into* the app (voice-to-text) was skipped — Expo makes this tricky without extra setup, so typing is the way for now
+- The fake word list uses simple English words (`hello`, `thank you`...) — once the real model's exact letter/word list is final, someone should double check the names match
+
+---
+
+## 🗂️ Where Everything Lives
 
 ```
 mobile/
-  App.tsx                  # Navigation container + stack setup, theme wiring
-  app.json                 # Expo config (name, camera permissions, plugin)
-  navigation/types.ts      # RootStackParamList
-  screens/
-    HomeScreen.tsx
-    UnderstandSignScreen.tsx
-    SpeakWithSignScreen.tsx
-  components/
-    OptionCard.tsx         # Home screen large option card
-    SignCard.tsx            # Word -> sign illustration card (+ fallback state)
-    PrimaryButton.tsx
-  services/api.ts           # API contract + mock/real toggle
-  data/vocabulary.ts        # Known-word -> sign illustration list
-  theme/theme.ts             # Brand palette, spacing, radius, useThemeColors()
+├── App.tsx                        # 🚦 sets up navigation + theme
+├── screens/
+│   ├── HomeScreen.tsx              # 🏠 the two big buttons
+│   ├── UnderstandSignScreen.tsx    # 🎥 camera → text → speech
+│   └── SpeakWithSignScreen.tsx     # ✍️ text → sign cards
+├── components/
+│   ├── OptionCard.tsx              # the big home screen buttons
+│   ├── SignCard.tsx                # word → picture card
+│   └── PrimaryButton.tsx
+├── services/api.ts                 # 🔌 real/pretend backend switch
+├── data/vocabulary.ts              # 📖 known words → pictures
+└── theme/theme.ts                  # 🎨 colors, spacing, dark mode
 ```

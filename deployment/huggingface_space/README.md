@@ -9,99 +9,102 @@ app_file: app.py
 pinned: false
 ---
 
-# SignBridge — Hugging Face Space
+# ☁️ SignBridge on Hugging Face
 
-Self-contained build of the SignBridge live sign-language-to-speech demo,
-ready to push to a Hugging Face Space. Everything the app needs (model
-weights, feature/landmark code, the MediaPipe hand-landmarker asset) lives
-in this folder so it can be pushed as-is.
+This folder is a **ready-to-go backpack** 🎒 — everything SignBridge needs to run is already packed inside it, so you can carry it over to Hugging Face and it just works.
 
-## Files in this folder
+```mermaid
+flowchart LR
+    A["🎒 This folder<br/>(app + brain + tools)"] -->|"git push"| B["☁️ Hugging Face<br/>Space"]
+    B --> C["🌍 A live website<br/>anyone can open"]
+```
 
-- `app.py` — the Gradio demo (self-contained copy of `app/main.py`)
-- `features.py`, `hand_landmarker.py` — bundled copies of `model/features.py` /
-  `model/hand_landmarker.py` (landmark math + MediaPipe Tasks API wrapper)
-- `sentence_builder.py` — bundled copy of `app/sentence_builder.py` (Gemini
-  sentence smoothing, degrades gracefully with no API key)
-- `sign_model.pkl`, `labels.json` — the trained classifier, copied from
-  `model/saved/`
-- `assets/hand_landmarker.task` — MediaPipe's hand-landmark model asset
-  (auto-downloaded on first run if missing, so it doesn't strictly need to be
-  committed, but bundling it avoids a cold-start download on Spaces)
-- `requirements.txt` — Python deps for the Space
+---
 
-## One-time setup (do this before pushing)
+## ⚠️ Important Heads-Up First
 
-1. **Copy the freshest trained model** (run this from the repo root after
-   `model/compare_models.py` or `model/train.py` has produced a model):
+We tried this and hit a paywall: **Hugging Face now asks for a paid "Pro" plan** to run a Python app (like ours) on their free computer tier. Only completely static websites are free to host there now. 😕
 
-   ```
-   cp model/saved/sign_model.pkl deployment/huggingface_space/sign_model.pkl
-   cp model/saved/labels.json   deployment/huggingface_space/labels.json
-   ```
+**Good news:** we found a totally free alternative instead — the live demo now runs on **Streamlit Community Cloud** here: 👉 [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/)
 
-   (Windows PowerShell: `Copy-Item model\saved\sign_model.pkl deployment\huggingface_space\sign_model.pkl`, etc.)
+Still want to try Hugging Face later (maybe you have Pro, or their rules change)? The steps below still work. Just know it might ask you to pay before it lets the app actually run. 💳
 
-2. **Install the Hugging Face CLI** if you don't have it, and log in:
+---
 
-   ```
-   pip install -U huggingface_hub
-   huggingface-cli login
-   ```
+## 🧳 What's Packed in This Backpack
 
-   This asks for an access token — get one from
-   https://huggingface.co/settings/tokens (a "write" token).
+| File | What it's for |
+|---|---|
+| 🖥️ `app.py` | The whole app (camera → hand dots → letter → sentence → speech) |
+| ✋ `features.py`, `hand_landmarker.py` | The hand-dot-finding tools |
+| ✍️ `sentence_builder.py` | Turns letters into a real sentence (Gemini or free backup) |
+| 🧠 `sign_model.pkl`, `labels.json` | The trained guessing-robot brain |
+| 📦 `assets/hand_landmarker.task` | A helper file MediaPipe needs |
+| 📋 `requirements.txt` | The shopping list of tools to install |
 
-## Creating and pushing the Space
+---
 
-1. Create a new Space on https://huggingface.co/new-space:
-   - Owner: your account/org
-   - Space name: e.g. `signbridge`
-   - SDK: **Gradio**
-   - Hardware: free CPU tier is fine for this model
-   - Visibility: your choice
+## 🛠️ Before You Push: Get the Freshest Brain
 
-2. Hugging Face gives you a git remote URL, something like
-   `https://huggingface.co/spaces/<your-username>/signbridge`. From *this*
-   folder (`deployment/huggingface_space/`), initialize git and push:
+If you've retrained the model recently, copy the newest version in first:
 
-   ```
-   cd deployment/huggingface_space
-   git init
-   git lfs install
-   git lfs track "*.pkl" "*.task"
-   git remote add origin https://huggingface.co/spaces/<your-username>/signbridge
-   git add .gitattributes
-   git add .
-   git commit -m "Initial SignBridge Space"
-   git push -u origin main
-   ```
+```bash
+# from the SignBridge/ folder
+cp model/saved/sign_model.pkl deployment/huggingface_space/sign_model.pkl
+cp model/saved/labels.json   deployment/huggingface_space/labels.json
+```
 
-   The `git lfs track` step matters: `sign_model.pkl` is a RandomForest with
-   200 trees and is currently **~110 MB**, well past the point where a plain
-   git push works cleanly on Hugging Face's hub (files over ~10 MB need
-   LFS). If you don't have `git-lfs` installed, get it from
-   https://git-lfs.com first.
+*(Windows PowerShell: use `Copy-Item` instead of `cp`.)*
 
-   (If the Space's default branch is `master` instead of `main`, push to
-   that branch name instead.)
+---
 
-3. **Set the Gemini API key as a Space secret** (don't commit it in a file):
-   in the Space's page -> Settings -> "Variables and secrets" -> add a new
-   secret named `GEMINI_API_KEY` with your key from
-   https://aistudio.google.com/apikey. Without this, sentence-building still
-   works but just joins the recognized words instead of using Gemini to
-   smooth them into a sentence.
+## 🔑 Step 1 — Log In to Hugging Face
 
-4. The Space will build automatically after the push (watch the "Building"
-   logs on the Space page). Once it's live, open it — Gradio's webcam
-   component will ask for camera permission in the browser.
+```bash
+pip install -U huggingface_hub
+huggingface-cli login
+```
 
-## Notes / known limitations
+It'll ask for a **token** (like a password just for this) — grab one at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens). Pick "write" access.
 
-- Spaces' free CPU tier can be slower per-frame than a local machine; if the
-  live label feels laggy, that's expected for real-time MediaPipe + sklearn
-  inference on CPU.
-- The bundled model only recognizes the letters it was trained on (see
-  `labels.json` for the exact list) — check `model/compare_models.py`'s
-  printed table in the main repo for the current accuracy.
+## 🏗️ Step 2 — Create Your Space
+
+Go to [huggingface.co/new-space](https://huggingface.co/new-space) and fill in:
+- **SDK:** Gradio 🟠
+- **Hardware:** free CPU tier is enough
+- Pick any name, like `signbridge`
+
+## 🚚 Step 3 — Send the Backpack Over
+
+```bash
+cd deployment/huggingface_space
+git init
+git lfs install
+git lfs track "*.pkl" "*.task"
+git remote add origin https://huggingface.co/spaces/<your-username>/signbridge
+git add .gitattributes
+git add .
+git commit -m "Initial SignBridge Space"
+git push -u origin main
+```
+
+> 🐘 **Why `git lfs`?** Our brain file (`sign_model.pkl`) is about **47 MB** — kind of a heavy suitcase! Hugging Face wants big files like this shipped through a special "freight" system called Git LFS instead of the normal way. If you don't have it, grab it free from [git-lfs.com](https://git-lfs.com).
+
+## 🔒 Step 4 — Add Your Secret Key (optional but nice)
+
+On the Space's page: **Settings → Variables and secrets → New secret**
+- Name: `GEMINI_API_KEY`
+- Value: your free key from [aistudio.google.com](https://aistudio.google.com/apikey)
+
+No key? Totally fine — a free backup AI (`llm7.io`) automatically takes over instead. 🆓
+
+## 🎉 Step 5 — Done!
+
+The Space builds itself automatically after you push (watch the "Building..." logs). Once it says "Running", open it up — your browser will ask for camera permission, and you're live! 📷✨
+
+---
+
+## 📝 Good to Know
+
+- Free CPU can feel a little slower than your own laptop — that's normal for camera + AI running together. 🐢
+- The model only knows the letters it was trained on — check `labels.json` for the full list, and `model/README.md` back in the main project for how well it does. 📊
