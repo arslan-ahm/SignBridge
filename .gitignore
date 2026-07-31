@@ -1,0 +1,39 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.joblib
+
+# The trained model (model/saved/) and extracted landmark dataset are
+# intentionally committed -- Streamlit Community Cloud / a plain `git clone`
+# needs sign_model.pkl to actually be in the repo for the deployed app to
+# work, and at ~47MB / ~9MB respectively they're well under GitHub's 100MB
+# hard limit, no git-lfs needed.
+
+# The Hugging Face Space deployment folder gets pushed to its OWN separate
+# git repo (see deployment/huggingface_space/README.md) -- don't duplicate
+# its large binary copies into this repo's history.
+deployment/huggingface_space/*.pkl
+deployment/huggingface_space/assets/
+
+data/raw/*
+!data/raw/.gitkeep
+
+# Env / secrets
+.env
+*.env.local
+
+# Node / Expo (mobile)
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/npm-debug.*
+mobile/*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local runtime artifacts
+.gradio/
+.streamlit/secrets.toml

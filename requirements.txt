@@ -1,0 +1,14 @@
+mediapipe
+opencv-contrib-python
+numpy
+pandas
+scikit-learn
+joblib
+gradio
+google-generativeai
+python-dotenv
+huggingface_hub
+datasets
+streamlit
+streamlit-webrtc
+av
