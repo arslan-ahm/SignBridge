@@ -1,6 +1,5 @@
 mediapipe
 opencv-contrib-python
-numpy
 pandas
 scikit-learn
 joblib
@@ -11,4 +10,3 @@ huggingface_hub
 datasets
 streamlit
 streamlit-webrtc
-av
