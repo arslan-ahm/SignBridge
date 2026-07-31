@@ -1,2 +1,5 @@
 libgl1
-libglib2.0-0t64
+libglib2.0-0
+
+# Necessary for processing video and audio streams
+ffmpeg
