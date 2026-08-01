@@ -29,29 +29,22 @@ Want to double check the code is healthy? Run `npx tsc --noEmit` — it should p
 
 ## 🎭 Real Mode vs. Pretend Mode
 
-Right now the app is running in **pretend mode** (we call it "mock mode"). It fakes the answers so you can click around and see everything working today, even though the real brain isn't plugged in yet. Think of it like a dress rehearsal. 🎬
-
-Everything lives in one file: [`services/api.ts`](./services/api.ts)
+Half of this app talks to a real backend, half still fakes it — and that's on purpose, not something half-finished. Everything lives in one file: [`services/api.ts`](./services/api.ts)
 
 ```ts
-export const API_BASE_URL = 'http://localhost:7860'; // 👉 put the real backend link here
-export const IS_MOCK = true;                          // 👉 flip to false when ready
+export const API_BASE_URL = 'https://signbridge-api-bruo.onrender.com';
+export const IS_PREDICT_MOCK = true;   // 👉 camera recognition: still pretend
+export const IS_SENTENCE_MOCK = false; // 👉 sentence-building: genuinely real!
 ```
 
-### 🔌 To connect the real brain:
-
-1. Put the real backend's web address into `API_BASE_URL`.
-2. Change `IS_MOCK` to `false`.
-3. Make sure that backend answers these two questions the same way:
-
-| Question we ask | What we send | What we expect back |
+| Question we ask | Real or pretend? | Why |
 |---|---|---|
-| "What sign is this?" → `POST /predict` | `{ image_base64 }` | `{ label, confidence }` |
-| "Make these words a sentence" → `POST /sentence` | `{ words }` | `{ sentence }` |
+| "What sign is this?" → `POST /predict` | 🎭 Pretend | The real endpoint needs a hand-tracking model that needs more memory than our free hosting tier allows — it works, but crashes the server every time it's actually called. Not worth it for now. |
+| "Make these words a sentence" → `POST /sentence` | ✅ Real | This one's light (just an AI text call) and runs reliably through a real **Render Workflow** — try it, it actually works! |
 
-That's it — no other code needs to change! The real network calls are already written, just waiting to be switched on. 🔦
+### 🔌 To make `/predict` real too:
 
-> 🚧 **Heads up:** the live [Streamlit demo](https://signbridge-asl.streamlit.app/) is a full web page, not this kind of simple API — so it can't be plugged in here as-is yet. Someone on the team needs to wrap the model in a tiny API (like the `/predict` and `/sentence` shape above) before this toggle can go live for real.
+Once the backend has a bigger instance behind it (see `backend/README.md`), flip `IS_PREDICT_MOCK` to `false` — no other code needs to change, the real network call is already written and waiting.
 
 ---
 

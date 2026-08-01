@@ -15,7 +15,7 @@ Millions of Deaf and hard-of-hearing people communicate fluently in ASL, but mos
 SignBridge watches a webcam feed, recognizes ASL fingerspelling letters in real time, and speaks the result out loud:
 
 1. **See** — MediaPipe finds 21 landmark points on your hand every frame.
-2. **Understand** — those points are converted into a 126-number feature vector and fed to a trained classifier, which recognizes the full A–Z alphabet.
+2. **Understand** — those points are converted into a 42-number feature vector and fed to a trained classifier, which recognizes the full A–Z alphabet.
 3. **Compose** — as letters accumulate, an LLM (Google Gemini, or a free `llm7.io` fallback if no API key is configured) turns the raw letter stream into a natural, grammatical sentence instead of a robotic string of letters.
 4. **Speak** — the browser's built-in text-to-speech reads the sentence out loud.
 
@@ -23,7 +23,7 @@ The live web demo runs today at [signbridge-asl.streamlit.app](https://signbridg
 
 ## How we built it
 
-**The model.** We turned hand photos into numbers using MediaPipe's hand-landmark detector (21 points × 3 coordinates × up to 2 hands = 126 features per frame), normalized and re-centered so scale and hand position don't matter. We trained on a combined dataset that grew to **60,000+ labeled examples** across the full alphabet — most of it thanks to a teammate who sourced and processed the larger training set. We didn't just pick a model and hope: `model/compare_models.py` raced five classifiers against each other — Random Forest, k-Nearest Neighbors, Linear SVM, RBF-kernel SVM, and Gradient Boosting. The two kernel/boosting methods were disqualified for taking 20+ minutes to train without finishing; among the three that actually completed, **Random Forest** won decisively on accuracy. Retrained on the full dataset, it now hits **~98% test accuracy** recognizing all 26 letters. We also pruned tree depth to cut the serialized model size roughly in half with almost no accuracy loss, so it stays light enough to ship in the repo.
+**The model.** We turned hand photos into numbers using MediaPipe's hand-landmark detector (21 points × 2 coordinates per hand = 42 features per frame). Early on, we benchmarked model families against a smaller starter dataset: `model/compare_models.py` raced five classifiers against each other — Random Forest, k-Nearest Neighbors, Linear SVM, RBF-kernel SVM, and Gradient Boosting. The two kernel/boosting methods were disqualified for taking 20+ minutes to train without finishing; among the three that actually completed, **Random Forest** won decisively on accuracy. A teammate then sourced and processed a much larger training set — **60,000+ labeled examples** across the full alphabet — and we retrained the same winning Random Forest architecture on it, which now hits **~98% test accuracy** recognizing all 26 letters.
 
 **The apps.** The web demo is built with **Streamlit** (deployed on Streamlit Community Cloud) with a **Gradio** version for local/offline use. The **mobile app** is Expo + React Native + TypeScript, with a clean mock/real backend toggle (`services/api.ts`) so the UI could be built and demoed before the backend existed.
 

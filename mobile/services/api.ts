@@ -1,20 +1,25 @@
 /**
  * SignBridge API service layer.
  *
- * Talks to the sign-recognition backend (a teammate's Hugging Face Space /
- * FastAPI/Gradio server, per the hackathon pipeline in ../app and ../model).
- * That backend is not deployed yet, so this file ships in MOCK MODE by
- * default: it returns plausible fake data with a small delay so the app is
- * fully demoable today. The real `fetch` calls are already written below —
- * flip `IS_MOCK` to `false` and set `API_BASE_URL` once the backend is live.
+ * The backend is a FastAPI service on Render (see ../../backend/api). Two
+ * different endpoints, two different reliability stories:
+ *
+ * - POST /sentence is real and reliable -- it delegates to a Render Workflow
+ *   task (../../backend/workflow) and we've verified it end to end.
+ * - POST /predict needs mediapipe + OpenCV + scikit-learn loaded in the same
+ *   512MB-RAM free-tier process, which is more memory than that combination
+ *   fits in -- it OOM-crashes the whole service every time it's actually
+ *   called. Fixing this for real means paying for a bigger instance, which
+ *   wasn't worth it for this deadline, so camera recognition stays mocked
+ *   (IS_PREDICT_MOCK) while sentence-building is genuinely live
+ *   (IS_SENTENCE_MOCK). Flip IS_PREDICT_MOCK once /predict has a large-enough
+ *   instance behind it.
  */
 
-// TODO(teammate): replace with the real Hugging Face Spaces URL once deployed,
-// e.g. "https://your-username-signbridge.hf.space"
-export const API_BASE_URL = 'http://localhost:7860';
+export const API_BASE_URL = 'https://signbridge-api-bruo.onrender.com';
 
-// TODO(teammate): flip to false once API_BASE_URL points at a real, reachable backend.
-export const IS_MOCK = true;
+export const IS_PREDICT_MOCK = true;
+export const IS_SENTENCE_MOCK = false;
 
 export interface RecognizeResult {
   label: string;
@@ -55,7 +60,7 @@ function pickMockLabel(): RecognizeResult {
  * Real contract: POST {API_BASE_URL}/predict  body: { image_base64 }
  */
 export async function recognizeFrame(imageBase64: string): Promise<RecognizeResult> {
-  if (IS_MOCK) {
+  if (IS_PREDICT_MOCK) {
     await delay(300 + Math.random() * 300);
     return pickMockLabel();
   }
@@ -87,7 +92,7 @@ function mockSentenceFromWords(words: string[]): string {
  * Real contract: POST {API_BASE_URL}/sentence  body: { words }
  */
 export async function buildSentence(words: string[]): Promise<SentenceResult> {
-  if (IS_MOCK) {
+  if (IS_SENTENCE_MOCK) {
     await delay(400);
     return { sentence: mockSentenceFromWords(words) };
   }
