@@ -215,6 +215,18 @@ section:last-of-type { border-bottom: none; }
 .stat strong { font-size: 1.7rem; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
 .stat span { font-size: 0.82rem; color: var(--text-faint); }
 
+/* ---------- CTA band (index page) ---------- */
+.cta-band {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.cta-band h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); letter-spacing: -0.02em; }
+.cta-band p { color: var(--text-dim); max-width: 480px; }
+
 /* ---------- Demo ---------- */
 .demo-grid {
   display: grid;

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Live Demo — SignBridge</title>
+<meta name="description" content="Try SignBridge live: show it an ASL sign and hear it spoken back, right in your browser." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤟</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="bg-glow" aria-hidden="true"></div>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">🤟</span>
+      <span>SignBridge</span>
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="index.html#how">How It Works</a>
+      <a href="index.html#stack">Tech</a>
+      <a href="https://github.com/arslan-ahm/SignBridge" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <a href="index.html" class="btn btn-ghost btn-sm nav-cta">← Back Home</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="demo">
+    <div class="section-head">
+      <p class="eyebrow">Live Demo</p>
+      <h2>Show it a sign</h2>
+      <p class="section-sub">Hand tracking runs entirely in your browser via MediaPipe (WASM) — only the small set of numbers describing your hand's shape is sent to our server, never your video.</p>
+    </div>
+
+    <div class="demo-grid">
+      <div class="camera-panel">
+        <div class="camera-frame">
+          <video id="video" playsinline autoplay muted></video>
+          <canvas id="overlay"></canvas>
+          <div id="cameraOverlayMsg" class="camera-msg">
+            <button id="startBtn" class="btn btn-primary">📷 Start Camera</button>
+            <p id="statusMsg" class="status-msg"></p>
+          </div>
+        </div>
+        <div class="live-readout">
+          <span class="label">Currently seeing</span>
+          <span id="currentLetter" class="current-letter">—</span>
+          <span id="currentConfidence" class="confidence-pill">0%</span>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <div class="panel-card">
+          <h3>Recognized signs</h3>
+          <div id="wordTrail" class="word-trail">
+            <span class="placeholder">Letters you sign will appear here…</span>
+          </div>
+          <div class="panel-actions">
+            <button id="buildBtn" class="btn btn-primary btn-sm" disabled>✍️ Build Sentence</button>
+            <button id="clearBtn" class="btn btn-outline btn-sm">🗑️ Clear</button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h3>Sentence</h3>
+          <p id="sentenceOut" class="sentence-out">Sign a few letters, then hit "Build Sentence."</p>
+          <div class="panel-actions">
+            <button id="speakBtn" class="btn btn-outline btn-sm" disabled>🔊 Speak It</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>Built with 🤟 for <strong>STEMist Hacks IV</strong></p>
+  <div class="footer-links">
+    <a href="index.html">Home</a>
+    <a href="https://github.com/arslan-ahm/SignBridge" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://signbridge-asl.streamlit.app/" target="_blank" rel="noopener">Streamlit App</a>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -22,12 +22,12 @@
       <span>SignBridge</span>
     </a>
     <nav class="nav-links">
-      <a href="#demo">Live Demo</a>
+      <a href="demo.html">Live Demo</a>
       <a href="#how">How It Works</a>
       <a href="#stack">Tech</a>
       <a href="https://github.com/arslan-ahm/SignBridge" target="_blank" rel="noopener">GitHub</a>
     </nav>
-    <a href="#demo" class="btn btn-primary btn-sm nav-cta">Try It Now</a>
+    <a href="demo.html" class="btn btn-primary btn-sm nav-cta">Try It Now</a>
   </div>
 </header>
 
@@ -42,7 +42,7 @@
       no special hardware, just a camera and a trained model.
     </p>
     <div class="hero-actions">
-      <a href="#demo" class="btn btn-primary">Try the Live Demo ↓</a>
+      <a href="demo.html" class="btn btn-primary">Try the Live Demo →</a>
       <a href="https://signbridge-asl.streamlit.app/" target="_blank" rel="noopener" class="btn btn-ghost">Open Web App</a>
     </div>
     <div class="hero-stats">
@@ -53,51 +53,10 @@
     </div>
   </section>
 
-  <section id="demo" class="demo">
-    <div class="section-head">
-      <p class="eyebrow">Live Demo</p>
-      <h2>Show it a sign</h2>
-      <p class="section-sub">Hand tracking runs entirely in your browser via MediaPipe (WASM) — only the small set of numbers describing your hand's shape is sent to our server, never your video.</p>
-    </div>
-
-    <div class="demo-grid">
-      <div class="camera-panel">
-        <div class="camera-frame">
-          <video id="video" playsinline autoplay muted></video>
-          <canvas id="overlay"></canvas>
-          <div id="cameraOverlayMsg" class="camera-msg">
-            <button id="startBtn" class="btn btn-primary">📷 Start Camera</button>
-            <p id="statusMsg" class="status-msg"></p>
-          </div>
-        </div>
-        <div class="live-readout">
-          <span class="label">Currently seeing</span>
-          <span id="currentLetter" class="current-letter">—</span>
-          <span id="currentConfidence" class="confidence-pill">0%</span>
-        </div>
-      </div>
-
-      <div class="control-panel">
-        <div class="panel-card">
-          <h3>Recognized signs</h3>
-          <div id="wordTrail" class="word-trail">
-            <span class="placeholder">Letters you sign will appear here…</span>
-          </div>
-          <div class="panel-actions">
-            <button id="buildBtn" class="btn btn-primary btn-sm" disabled>✍️ Build Sentence</button>
-            <button id="clearBtn" class="btn btn-outline btn-sm">🗑️ Clear</button>
-          </div>
-        </div>
-
-        <div class="panel-card">
-          <h3>Sentence</h3>
-          <p id="sentenceOut" class="sentence-out">Sign a few letters, then hit "Build Sentence."</p>
-          <div class="panel-actions">
-            <button id="speakBtn" class="btn btn-outline btn-sm" disabled>🔊 Speak It</button>
-          </div>
-        </div>
-      </div>
-    </div>
+  <section class="cta-band">
+    <h2>Ready to see it in action?</h2>
+    <p>Head to the live demo page and try it with your own hand — right now, in your browser.</p>
+    <a href="demo.html" class="btn btn-primary">Try the Live Demo →</a>
   </section>
 
   <section id="how" class="how">
@@ -167,6 +126,5 @@
   </div>
 </footer>
 
-<script type="module" src="js/app.js"></script>
 </body>
 </html>
