@@ -1,6 +1,6 @@
 # 🌐 SignBridge Website
 
-**Live:** https://magenta-concha-e2e893.netlify.app
+**Live:** https://signbridge-llm.netlify.app
 
 A professional, single-page site with a genuinely-working live demo — and a
 better architecture than our first backend attempt.

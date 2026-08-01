@@ -4,7 +4,7 @@
 
 ### 🌐 Try it right now — no install needed!
 
-## 👉 [magenta-concha-e2e893.netlify.app](https://magenta-concha-e2e893.netlify.app/) 👈
+## 👉 [signbridge-llm.netlify.app](https://signbridge-llm.netlify.app/) 👈
 
 *(also live on Streamlit: [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/))*
 
@@ -42,7 +42,7 @@ That's the whole trick! Camera → Dots → Letters → Sentence → Voice. 🎉
 | Piece | Status | Notes |
 |---|---|---|
 | 🧠 Model | ✅ Working | Full A–Z alphabet, ~98% accuracy, trained on 60,000+ examples |
-| 🌐 Website | ✅ **Live, fully working camera demo** | [magenta-concha-e2e893.netlify.app](https://magenta-concha-e2e893.netlify.app/) — hand tracking runs in your browser, so it isn't limited by server memory at all — see [`website/README.md`](website/README.md) |
+| 🌐 Website | ✅ **Live, fully working camera demo** | [signbridge-llm.netlify.app](https://signbridge-llm.netlify.app/) — hand tracking runs in your browser, so it isn't limited by server memory at all — see [`website/README.md`](website/README.md) |
 | 🖥️ Web app (Streamlit) | ✅ **Live on the internet** | [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/) — free, works on any device |
 | 🖥️ Web app (Gradio) | ✅ Works locally | `python app/main.py` on your own computer |
 | ✍️ Sentence builder | ✅ Working | Uses Gemini if you add a key, otherwise free `llm7.io` automatically |
