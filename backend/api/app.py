@@ -30,7 +30,9 @@ from sentence_builder import build_sentence
 load_dotenv()
 
 RENDER_API_KEY = os.getenv("RENDER_API_KEY")
-RENDER_SENTENCE_TASK_SLUG = os.getenv("RENDER_SENTENCE_TASK_SLUG", "build_sentence")
+RENDER_SENTENCE_TASK_SLUG = os.getenv(
+    "RENDER_SENTENCE_TASK_SLUG", "signbridge-sentence-workflow/build_sentence"
+)
 
 _workflows_client = None
 if RENDER_API_KEY:
@@ -115,7 +117,7 @@ def sentence(req: SentenceRequest):
 
     if _workflows_client is not None:
         try:
-            run = _workflows_client.run_task(RENDER_SENTENCE_TASK_SLUG, {"words": words})
+            run = _workflows_client.run_task(RENDER_SENTENCE_TASK_SLUG, [words])
             if not run.error and run.results:
                 return SentenceResponse(sentence=run.results[0])
         except Exception:
