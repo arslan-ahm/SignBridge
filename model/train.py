@@ -1,61 +1,29 @@
-"""Train a baseline sign classifier from collected landmark data.
-
-This is the fast baseline to get the demo working end-to-end today.
-model/compare_models.py (run separately) tries several algorithms against
-the same dataset and can produce a better model to drop in here.
-
-Usage:
-    python model/train.py
-"""
-import json
-import os
-
-import joblib
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report
+import joblib
+import os
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
 
-from features import feature_columns
+CSV_PATH = "data/landmarks/hand_landmarks.csv"
+MODEL_PATH = "model/sign_model.pkl"
 
-DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "landmarks", "dataset.csv")
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "saved", "sign_model.pkl")
-LABELS_PATH = os.path.join(os.path.dirname(__file__), "saved", "labels.json")
+print("Loading landmarks dataset...")
+df = pd.read_csv(CSV_PATH)
 
+x = df.drop("label", axis=1)
+y = df["label"]
 
-def main():
-    if not os.path.exists(DATA_PATH) or os.path.getsize(DATA_PATH) == 0:
-        raise SystemExit(
-            f"No data found at {DATA_PATH}. Run model/collect_landmarks.py first to record some signs."
-        )
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
-    df = pd.read_csv(DATA_PATH)
-    if df["label"].nunique() < 2:
-        raise SystemExit("Need at least 2 different signs recorded before training.")
+print("Training Random Forest Model...")
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(x_train, y_train)
 
-    X = df[feature_columns()]
-    y = df["label"]
+y_pred = model.predict(x_test)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"\nModel Accuracy: {accuracy * 100:.2f}%")
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y if df["label"].value_counts().min() > 1 else None
-    )
-
-    model = RandomForestClassifier(n_estimators=200, random_state=42)
-    model.fit(X_train, y_train)
-
-    preds = model.predict(X_test)
-    accuracy = accuracy_score(y_test, preds)
-    print(f"Test accuracy: {accuracy:.2%}")
-    print(classification_report(y_test, preds))
-
-    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-    joblib.dump(model, MODEL_PATH)
-    with open(LABELS_PATH, "w") as f:
-        json.dump(sorted(y.unique().tolist()), f, indent=2)
-
-    print(f"Saved model to {MODEL_PATH}")
-    print(f"Saved label list to {LABELS_PATH}")
-
-
-if __name__ == "__main__":
-    main()
+os.makedirs("model", exist_ok=True)
+joblib.dump(model, MODEL_PATH, compress=3)
+print(f"Model saved successfully to '{MODEL_PATH}'!")
