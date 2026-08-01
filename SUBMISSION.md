@@ -2,7 +2,7 @@
 
 **A magic mirror for hands: sign a letter, and your computer says it out loud.**
 
-🔗 **Live demo:** [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/) — no install needed, works in any browser.
+🔗 **Live demo:** [magenta-concha-e2e893.netlify.app](https://magenta-concha-e2e893.netlify.app/) — no install needed, works in any browser. (Also live on Streamlit: [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/))
 
 ---
 
@@ -19,7 +19,7 @@ SignBridge watches a webcam feed, recognizes ASL fingerspelling letters in real 
 3. **Compose** — as letters accumulate, an LLM (Google Gemini, or a free `llm7.io` fallback if no API key is configured) turns the raw letter stream into a natural, grammatical sentence instead of a robotic string of letters.
 4. **Speak** — the browser's built-in text-to-speech reads the sentence out loud.
 
-The live web demo runs today at [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/). We also built a companion **Expo/React Native mobile app** with two flows: **"Understand Sign"** (camera → recognized signs → sentence → speech) for hearing users trying to understand a signer, and **"Speak with Sign"** (type or speak → shown as sign images) for the reverse direction. And underneath both sits a real **FastAPI backend on Render**, with sentence-building running as an actual **Render Workflow** task — an LLM call with built-in retries, not just a plain API route.
+Our main live demo is a professionally designed website at [magenta-concha-e2e893.netlify.app](https://magenta-concha-e2e893.netlify.app/), where hand-landmark detection runs **entirely in your browser** (MediaPipe's WASM build) — no video ever leaves your device, only a small array of numbers describing your hand's shape. We also ship the original Streamlit demo at [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/), and a companion **Expo/React Native mobile app** with two flows: **"Understand Sign"** (camera → recognized signs → sentence → speech) for hearing users trying to understand a signer, and **"Speak with Sign"** (type or speak → shown as sign images) for the reverse direction. Underneath all three sits a real **FastAPI backend on Render**, with sentence-building running as an actual **Render Workflow** task — an LLM call with built-in retries, not just a plain API route.
 
 ## How we built it
 
@@ -27,9 +27,11 @@ The live web demo runs today at [signbridge-asl.streamlit.app](https://signbridg
 
 **The apps.** The web demo is built with **Streamlit** (deployed on Streamlit Community Cloud) with a **Gradio** version for local/offline use. The **mobile app** is Expo + React Native + TypeScript, with a clean mock/real backend toggle (`services/api.ts`) so the UI could be built and demoed before the backend existed.
 
-**The backend.** A **FastAPI** service handles `POST /predict` synchronously — recognition needs to feel instant. `POST /sentence`, on the other hand, hands off to a genuine **Render Workflow**: the LLM call to Gemini (or the `llm7.io` fallback) is exactly the kind of slow, occasionally-flaky external call that Workflows' built-in retries exist for. If the workflow isn't configured or fails, the API transparently falls back to running the same sentence-building logic in-process, so `/sentence` never just breaks — it degrades gracefully.
+**The backend.** A **FastAPI** service exposes recognition and sentence-building. `POST /sentence` hands off to a genuine **Render Workflow**: the LLM call to Gemini (or the `llm7.io` fallback) is exactly the kind of slow, occasionally-flaky external call that Workflows' built-in retries exist for. If the workflow isn't configured or fails, the API transparently falls back to running the same sentence-building logic in-process, so `/sentence` never just breaks — it degrades gracefully.
 
-**Full stack:** MediaPipe, scikit-learn, Streamlit, Gradio, Expo/React Native, FastAPI, Render Workflows, Google Gemini API, llm7.io.
+**The website.** Our first backend design ran MediaPipe + OpenCV server-side for `POST /predict`, which needs more RAM than Render's free tier gives a web service — confirmed by repeated live testing, it reliably crashed the whole service. Rather than pay for a bigger instance, we fixed the actual architecture: the website runs MediaPipe's official WASM build directly in the browser, extracts the same 42-number feature vector our Python code computes, and sends only that tiny array to a new `POST /predict-vector` endpoint that loads just `scikit-learn` — no mediapipe, no OpenCV, no memory ceiling. It's plain HTML/CSS/JS (no build step) deployed on Netlify, split into a landing page and a dedicated live-demo page.
+
+**Full stack:** MediaPipe (Python Tasks API + browser WASM build), scikit-learn, Streamlit, Gradio, Netlify, Expo/React Native, FastAPI, Render Workflows, Google Gemini API, llm7.io.
 
 ## Challenges we ran into
 
@@ -38,13 +40,14 @@ The live web demo runs today at [signbridge-asl.streamlit.app](https://signbridg
 - **Hugging Face Spaces wanted a paid "Pro" plan** to host our Python app on free-tier CPU, which we didn't find out until we were partway into deploying there. We pivoted to Streamlit Community Cloud instead, which is what's actually live today — the HF Space config is still in the repo, ready to go if that constraint changes.
 - **J and Z don't work as still photos.** Both are motion signs in real ASL (you draw them in the air), but our model only ever sees a single frame. We made the deliberate call to still support the full A–Z label set with the letter classifier, rather than pretend those two letters work the same way as the rest.
 - **Render Workflows aren't yet supported by `render.yaml`** (Infrastructure-as-Code), unlike the plain web service. We had to set up the workflow service by hand in the Render dashboard and wire the API to it with a `RENDER_API_KEY`, while keeping an in-process fallback so a misconfigured or missing workflow never takes down the whole `/sentence` endpoint.
+- **Our first `/predict` design reliably crashed Render's free tier.** mediapipe + OpenCV + scikit-learn loaded together in one process need more than 512MB RAM — confirmed by repeated live testing, not a guess. Rather than pay for a bigger instance, we moved hand-tracking to the browser (MediaPipe's WASM build) and built a lightweight `/predict-vector` endpoint that never loads mediapipe/OpenCV server-side at all — a better architecture, not just a workaround.
 - **The mobile app and the backend were built in parallel by design** — the app shipped first against a mocked API (`IS_MOCK = true`) so we could iterate on UI/UX without waiting on the model pipeline, then we built the real FastAPI contract to match exactly what the mobile app already expected.
 
 ## Accomplishments we're proud of
 
 - A real-time, full-alphabet (A–Z) ASL fingerspelling recognizer running at ~98% test accuracy, trained on a 60,000+ example dataset, that runs comfortably on a normal webcam with no special hardware.
 - Actually benchmarking multiple model families instead of guessing — and having the discipline to cut two that couldn't finish training in time.
-- A genuinely working, publicly accessible live demo — not just a local script — at signbridge-asl.streamlit.app.
+- A genuinely working, publicly accessible live demo with real camera recognition running entirely client-side — not just a local script — at magenta-concha-e2e893.netlify.app.
 - A production-shaped backend on Render with a real Workflow doing real work (an LLM call with retries), not a Workflow bolted on just to check a box.
 - A second, independent mobile client built against a mocked API contract that dropped in against the real backend with no UI changes needed.
 
@@ -58,14 +61,13 @@ The live web demo runs today at [signbridge-asl.streamlit.app](https://signbridg
 
 ## What's next
 
-- Point the mobile app at the live Render backend and flip `IS_MOCK` to `false` for real end-to-end camera recognition on-device.
+- Bring the same on-device MediaPipe approach to the mobile app (there's a JS/native equivalent) so its camera recognition can go live without hitting the same server-memory ceiling.
 - Add support for full ASL words and common phrases, not just fingerspelled letters, using a sequence model that can handle motion (which would also finally bring J and Z into the fold).
 - Expand "Speak with Sign" with a fuller sign-image/video vocabulary instead of the current placeholder word list.
-- Explore on-device inference for the mobile app so recognition works with no backend round-trip at all.
 - Deploy the Hugging Face Space as an alternate mirror once we can host it on a supported plan.
 
 ---
 
-**Try it:** [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/)
+**Try it:** [magenta-concha-e2e893.netlify.app](https://magenta-concha-e2e893.netlify.app/)
 
-**Built with:** Python · MediaPipe · scikit-learn (Random Forest) · Streamlit · Gradio · Expo · React Native · TypeScript · FastAPI · Render · Render Workflows · Google Gemini API · llm7.io
+**Built with:** Python · MediaPipe (Tasks API + browser WASM) · scikit-learn (Random Forest) · Streamlit · Gradio · Netlify · Expo · React Native · TypeScript · FastAPI · Render · Render Workflows · Google Gemini API · llm7.io
