@@ -30,8 +30,8 @@ from features import landmarks_to_vector  # noqa: E402
 
 from sentence_builder import build_sentence  # noqa: E402
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "saved", "sign_model.pkl")
-LABELS_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "saved", "labels.json")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "sign_model.pkl")
+LABELS_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "labels.json")
 
 STABILITY_FRAMES = 12
 CONFIDENCE_THRESHOLD = 0.6
@@ -46,7 +46,7 @@ def load_model():
 
 @st.cache_resource
 def load_detector():
-    return hl.create_video_detector(max_hands=2, min_detection_confidence=0.6)
+    return hl.create_video_detector(max_hands=1, min_detection_confidence=0.6)
 
 
 class SharedState:
@@ -143,8 +143,8 @@ def main():
     model, labels = load_model()
     if model is None:
         st.warning(
-            "No trained model found. Run `model/collect_landmarks.py` then `model/train.py` "
-            "(or `model/compare_models.py`) locally, commit `model/saved/`, and redeploy."
+            "No trained model found. Run `extract_landmarks.py` then `model/train.py` "
+            "locally, commit `model/sign_model.pkl` + `model/labels.json`, and redeploy."
         )
 
     detector = load_detector()

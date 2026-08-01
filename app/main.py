@@ -4,8 +4,7 @@ Run with:
     python app/main.py
 
 Then open the local URL Gradio prints. Requires a trained model at
-model/saved/sign_model.pkl (run model/collect_landmarks.py then
-model/train.py first).
+model/sign_model.pkl (run extract_landmarks.py then model/train.py first).
 """
 import json
 import os
@@ -22,8 +21,8 @@ from features import landmarks_to_vector  # noqa: E402
 
 from sentence_builder import build_sentence  # noqa: E402
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "saved", "sign_model.pkl")
-LABELS_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "saved", "labels.json")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "sign_model.pkl")
+LABELS_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "labels.json")
 
 STABILITY_FRAMES = 12  # ~0.4s at typical webcam stream rate — must hold a sign this long before it "counts"
 CONFIDENCE_THRESHOLD = 0.6
@@ -36,7 +35,7 @@ if os.path.exists(LABELS_PATH):
     with open(LABELS_PATH) as f:
         _labels = json.load(f)
 
-_detector = hl.create_video_detector(max_hands=2, min_detection_confidence=0.6)
+_detector = hl.create_video_detector(max_hands=1, min_detection_confidence=0.6)
 _stream_start = time.time()
 _last_timestamp_ms = -1
 
@@ -125,7 +124,7 @@ with gr.Blocks(title="SignBridge") as demo:
     gr.Markdown("# 🤟 SignBridge — live sign language translator")
     if _model is None:
         gr.Markdown(
-            "⚠️ **No trained model found.** Run `model/collect_landmarks.py` to record signs, "
+            "⚠️ **No trained model found.** Run `extract_landmarks.py` to build a dataset, "
             "then `model/train.py` to train, then restart this app."
         )
 
