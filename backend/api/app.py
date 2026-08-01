@@ -29,6 +29,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from features import VECTOR_LENGTH
 from sentence_builder import build_sentence
 
 load_dotenv()
@@ -53,6 +54,35 @@ _detector = None
 _hl = None
 _landmarks_to_vector = None
 _load_lock = threading.Lock()
+
+# The lightweight model-only path (used by /predict-vector) is kept separate
+# from the full mediapipe+OpenCV path (used by /predict) because features.py
+# has zero mediapipe dependency -- it's pure list/number math -- so a client
+# that already has the 42-number feature vector (e.g. the website, which runs
+# MediaPipe's WASM build in-browser) never needs mediapipe/OpenCV loaded on
+# the server at all, which is what actually blew past Render's 512MB limit.
+_vector_model = None
+_vector_labels = None
+_vector_load_lock = threading.Lock()
+
+
+def _ensure_vector_model_loaded():
+    global _vector_model, _vector_labels
+    if _vector_model is not None:
+        return
+
+    with _vector_load_lock:
+        if _vector_model is not None:
+            return
+
+        import joblib
+
+        model = joblib.load(MODEL_PATH)
+        with open(LABELS_PATH) as f:
+            labels = json.load(f)
+
+        _vector_labels = labels
+        _vector_model = model
 
 
 def _ensure_predict_deps_loaded():
@@ -99,6 +129,10 @@ class PredictResponse(BaseModel):
     confidence: float
 
 
+class PredictVectorRequest(BaseModel):
+    vector: List[float]
+
+
 class SentenceRequest(BaseModel):
     words: List[str]
 
@@ -142,6 +176,28 @@ def predict(req: PredictRequest):
     proba = _model.predict_proba([vector])[0]
     best_idx = int(np.argmax(proba))
     return PredictResponse(label=str(_model.classes_[best_idx]), confidence=float(proba[best_idx]))
+
+
+@app.post("/predict-vector", response_model=PredictResponse)
+def predict_vector(req: PredictVectorRequest):
+    """Same recognition as /predict, but takes an already-computed 42-number
+    feature vector instead of an image -- meant for callers that already ran
+    hand-landmark detection themselves (e.g. the website, using MediaPipe's
+    in-browser WASM build). This never loads mediapipe/OpenCV server-side,
+    so it stays well within Render's free-tier memory limit."""
+    if len(req.vector) != VECTOR_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"vector must have exactly {VECTOR_LENGTH} numbers, got {len(req.vector)}",
+        )
+
+    _ensure_vector_model_loaded()
+    proba = _vector_model.predict_proba([req.vector])[0]
+    best_idx = int(np.argmax(proba))
+    confidence = float(proba[best_idx])
+    if confidence < 0.5:
+        return PredictResponse(label=None, confidence=confidence)
+    return PredictResponse(label=str(_vector_model.classes_[best_idx]), confidence=confidence)
 
 
 @app.post("/sentence", response_model=SentenceResponse)
