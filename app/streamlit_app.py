@@ -29,6 +29,7 @@ import hand_landmarker as hl  # noqa: E402
 from features import landmarks_to_vector  # noqa: E402
 
 from sentence_builder import build_sentence  # noqa: E402
+from turn import get_ice_servers  # noqa: E402
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "sign_model.pkl")
 LABELS_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "labels.json")
@@ -157,6 +158,7 @@ def main():
         key="signbridge",
         video_frame_callback=make_video_frame_callback(model, labels, detector, state, st.session_state.stream_start),
         media_stream_constraints={"video": True, "audio": False},
+        rtc_configuration={"iceServers": get_ice_servers()},
     )
 
     st.text_input("Currently seeing", value=state.live_label, disabled=True)
