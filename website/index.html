@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SignBridge — Real-Time ASL Translator</title>
+<meta name="description" content="SignBridge watches your hand sign the alphabet and speaks it out loud in real time, right in your browser." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤟</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="bg-glow" aria-hidden="true"></div>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a href="#top" class="brand">
+      <span class="brand-mark">🤟</span>
+      <span>SignBridge</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#demo">Live Demo</a>
+      <a href="#how">How It Works</a>
+      <a href="#stack">Tech</a>
+      <a href="https://github.com/arslan-ahm/SignBridge" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <a href="#demo" class="btn btn-primary btn-sm nav-cta">Try It Now</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <p class="eyebrow">Built for STEMist Hacks IV</p>
+    <h1>Sign a letter.<br /><span class="text-gradient">Hear it spoken back.</span></h1>
+    <p class="hero-sub">
+      SignBridge watches your hand through the webcam, recognizes ASL fingerspelling
+      in real time, and turns it into a natural spoken sentence — no gloves,
+      no special hardware, just a camera and a trained model.
+    </p>
+    <div class="hero-actions">
+      <a href="#demo" class="btn btn-primary">Try the Live Demo ↓</a>
+      <a href="https://signbridge-asl.streamlit.app/" target="_blank" rel="noopener" class="btn btn-ghost">Open Web App</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><strong>26</strong><span>letters, A–Z</span></div>
+      <div class="stat"><strong>~98%</strong><span>test accuracy</span></div>
+      <div class="stat"><strong>60k+</strong><span>training examples</span></div>
+      <div class="stat"><strong>100%</strong><span>runs in your browser</span></div>
+    </div>
+  </section>
+
+  <section id="demo" class="demo">
+    <div class="section-head">
+      <p class="eyebrow">Live Demo</p>
+      <h2>Show it a sign</h2>
+      <p class="section-sub">Hand tracking runs entirely in your browser via MediaPipe (WASM) — only the small set of numbers describing your hand's shape is sent to our server, never your video.</p>
+    </div>
+
+    <div class="demo-grid">
+      <div class="camera-panel">
+        <div class="camera-frame">
+          <video id="video" playsinline autoplay muted></video>
+          <canvas id="overlay"></canvas>
+          <div id="cameraOverlayMsg" class="camera-msg">
+            <button id="startBtn" class="btn btn-primary">📷 Start Camera</button>
+            <p id="statusMsg" class="status-msg"></p>
+          </div>
+        </div>
+        <div class="live-readout">
+          <span class="label">Currently seeing</span>
+          <span id="currentLetter" class="current-letter">—</span>
+          <span id="currentConfidence" class="confidence-pill">0%</span>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <div class="panel-card">
+          <h3>Recognized signs</h3>
+          <div id="wordTrail" class="word-trail">
+            <span class="placeholder">Letters you sign will appear here…</span>
+          </div>
+          <div class="panel-actions">
+            <button id="buildBtn" class="btn btn-primary btn-sm" disabled>✍️ Build Sentence</button>
+            <button id="clearBtn" class="btn btn-outline btn-sm">🗑️ Clear</button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h3>Sentence</h3>
+          <p id="sentenceOut" class="sentence-out">Sign a few letters, then hit "Build Sentence."</p>
+          <div class="panel-actions">
+            <button id="speakBtn" class="btn btn-outline btn-sm" disabled>🔊 Speak It</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" class="how">
+    <div class="section-head">
+      <p class="eyebrow">Under The Hood</p>
+      <h2>How it works</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-icon">📷</div>
+        <h4>See</h4>
+        <p>Your webcam frame is analyzed live, entirely on your device.</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-icon">✋</div>
+        <h4>Track</h4>
+        <p>MediaPipe finds 21 points on your hand — no video ever leaves your browser.</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-icon">🤖</div>
+        <h4>Recognize</h4>
+        <p>A trained Random Forest model turns those points into a letter, A–Z.</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-icon">✍️</div>
+        <h4>Compose</h4>
+        <p>An LLM — running on a real Render Workflow — turns letters into a real sentence.</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-icon">🔊</div>
+        <h4>Speak</h4>
+        <p>Your browser reads the sentence out loud.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="stack" class="stack">
+    <div class="section-head">
+      <p class="eyebrow">Built With</p>
+      <h2>The full stack</h2>
+    </div>
+    <div class="badge-grid">
+      <span class="badge">MediaPipe (WASM)</span>
+      <span class="badge">scikit-learn</span>
+      <span class="badge">FastAPI</span>
+      <span class="badge">Render Workflows</span>
+      <span class="badge">Google Gemini</span>
+      <span class="badge">llm7.io</span>
+      <span class="badge">Streamlit</span>
+      <span class="badge">Expo / React Native</span>
+      <span class="badge">Python</span>
+      <span class="badge">TypeScript</span>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>Built with 🤟 for <strong>STEMist Hacks IV</strong></p>
+  <div class="footer-links">
+    <a href="https://github.com/arslan-ahm/SignBridge" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://signbridge-asl.streamlit.app/" target="_blank" rel="noopener">Streamlit App</a>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -4,7 +4,9 @@
 
 ### 🌐 Try it right now — no install needed!
 
-## 👉 [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/) 👈
+## 👉 [magenta-concha-e2e893.netlify.app](https://magenta-concha-e2e893.netlify.app/) 👈
+
+*(also live on Streamlit: [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/))*
 
 ---
 
@@ -26,6 +28,7 @@ That's the whole trick! Camera → Dots → Letters → Sentence → Voice. 🎉
 
 | I want to... | Go here |
 |---|---|
+| 🌐 See the professional live website | [`website/README.md`](website/README.md) |
 | 🧠 See how the guessing-robot model was built & tested | [`model/README.md`](model/README.md) |
 | 📱 Check out the phone app | [`mobile/README.md`](mobile/README.md) |
 | 🔌 See the real backend (FastAPI + Render Workflow) | [`backend/README.md`](backend/README.md) |
@@ -39,11 +42,12 @@ That's the whole trick! Camera → Dots → Letters → Sentence → Voice. 🎉
 | Piece | Status | Notes |
 |---|---|---|
 | 🧠 Model | ✅ Working | Full A–Z alphabet, ~98% accuracy, trained on 60,000+ examples |
+| 🌐 Website | ✅ **Live, fully working camera demo** | [magenta-concha-e2e893.netlify.app](https://magenta-concha-e2e893.netlify.app/) — hand tracking runs in your browser, so it isn't limited by server memory at all — see [`website/README.md`](website/README.md) |
 | 🖥️ Web app (Streamlit) | ✅ **Live on the internet** | [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/) — free, works on any device |
 | 🖥️ Web app (Gradio) | ✅ Works locally | `python app/main.py` on your own computer |
 | ✍️ Sentence builder | ✅ Working | Uses Gemini if you add a key, otherwise free `llm7.io` automatically |
-| 🔌 Backend API | ✅ **Live on Render** | `/sentence` is fully real (runs on a genuine Render Workflow); `/predict` is built and deployed but needs a bigger (paid) instance to run reliably — see [`backend/README.md`](backend/README.md) |
-| 📱 Mobile app | 🟡 Built, camera recognition mocked | Sentence-building is genuinely live; camera recognition uses mock data until `/predict` has a bigger instance behind it |
+| 🔌 Backend API | ✅ **Live on Render** | `/sentence` (genuine Render Workflow) and the website's `/predict-vector` both work reliably; the older image-based `/predict` needs a bigger (paid) instance — see [`backend/README.md`](backend/README.md) |
+| 📱 Mobile app | 🟡 Built, camera recognition mocked | Sentence-building is genuinely live; camera recognition uses mock data (same memory limit as old `/predict`) |
 | ☁️ Hugging Face Space | 🟡 Ready, not deployed | Needs a paid HF "Pro" plan to host a Python app for free-tier CPU — see its README |
 
 ---
@@ -52,6 +56,7 @@ That's the whole trick! Camera → Dots → Letters → Sentence → Voice. 🎉
 
 ```
 SignBridge/
+├── 🌐 website/          → the professional live website (see website/README.md!)
 ├── 🧠 model/            → the guessing-robot brain (see model/README.md!)
 ├── 🖥️ app/              → the web apps (Streamlit + Gradio) that use the brain
 ├── 📱 mobile/           → the phone app
