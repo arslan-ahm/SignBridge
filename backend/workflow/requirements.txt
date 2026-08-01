@@ -1,0 +1,3 @@
+render_sdk
+google-generativeai
+python-dotenv

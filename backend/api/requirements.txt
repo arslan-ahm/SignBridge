@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic
+mediapipe
+opencv-contrib-python
+numpy
+joblib
+python-dotenv
+google-generativeai
+render_sdk
