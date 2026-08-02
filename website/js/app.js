@@ -11,9 +11,9 @@ const API_BASE_URL = "https://signbridge-api-bruo.onrender.com";
 const HAND_LANDMARKER_MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task";
 
-const PREDICT_INTERVAL_MS = 350; // how often we ask the backend for a letter
-const STABILITY_HITS_NEEDED = 3; // consecutive matching predictions before we "commit" a letter
-const CONFIDENCE_THRESHOLD = 0.6;
+const PREDICT_INTERVAL_MS = 220; // how often we ask the backend for a letter
+const STABILITY_HITS_NEEDED = 2; // consecutive matching predictions before we "commit" a letter
+const CONFIDENCE_THRESHOLD = 0.45; // live webcam frames score lower than the dataset photos the model trained on -- STABILITY_HITS_NEEDED is what filters noise, not this
 
 // Standard MediaPipe hand topology (21 landmarks) -- fixed, not exported by the JS package.
 const HAND_CONNECTIONS = [
@@ -34,7 +34,9 @@ const overlay = document.getElementById("overlay");
 const overlayCtx = overlay.getContext("2d");
 const cameraOverlayMsg = document.getElementById("cameraOverlayMsg");
 const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
 const statusMsg = document.getElementById("statusMsg");
+const subtitleEl = document.getElementById("subtitle");
 const currentLetterEl = document.getElementById("currentLetter");
 const currentConfidenceEl = document.getElementById("currentConfidence");
 const wordTrail = document.getElementById("wordTrail");
@@ -48,12 +50,18 @@ const speakBtn = document.getElementById("speakBtn");
 // ---------------------------------------------------------------------------
 
 let handLandmarker = null;
+let handLandmarkerDelegate = "GPU";
 let words = [];
 let lastPredictedLabel = null;
 let stableCount = 0;
 let lastPredictTime = 0;
 let predictInFlight = false;
 let currentSentence = "";
+let mediaStream = null;
+let isRunning = false;
+let animationId = null;
+let consecutiveFrameErrors = 0;
+let lastHandSeenAt = 0;
 
 function setStatus(text, isError = false) {
   statusMsg.textContent = text;
@@ -64,16 +72,34 @@ function setStatus(text, isError = false) {
 // MediaPipe setup
 // ---------------------------------------------------------------------------
 
-async function initHandLandmarker() {
+async function initHandLandmarker(delegate = "GPU") {
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
   );
   handLandmarker = await HandLandmarker.createFromOptions(vision, {
-    baseOptions: { modelAssetPath: HAND_LANDMARKER_MODEL_URL, delegate: "GPU" },
+    baseOptions: { modelAssetPath: HAND_LANDMARKER_MODEL_URL, delegate },
     runningMode: "VIDEO",
     numHands: 1,
-    minHandDetectionConfidence: 0.6,
+    // Lower than the MediaPipe default (0.5) -- a live webcam hand at an
+    // awkward angle or partially out of frame should still get picked up;
+    // STABILITY_HITS_NEEDED is what filters out noise, not this.
+    minHandDetectionConfidence: 0.4,
   });
+  handLandmarkerDelegate = delegate;
+}
+
+// If the GPU delegate's WebGL context misbehaves on a given device/driver,
+// detectForVideo() can throw every frame -- silently freezing hand tracking
+// forever, since a throw inside detectLoop would otherwise stop the
+// requestAnimationFrame chain from ever rescheduling itself. Re-creating the
+// landmarker on the CPU delegate once is a cheap, automatic recovery.
+async function fallBackToCpuDelegate() {
+  console.warn("Hand tracking kept failing on the GPU delegate -- retrying on CPU.");
+  try {
+    await initHandLandmarker("CPU");
+  } catch (err) {
+    console.error("CPU delegate fallback also failed:", err);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -82,25 +108,32 @@ async function initHandLandmarker() {
 
 async function startCamera() {
   startBtn.disabled = true;
-  setStatus("Loading hand-tracking model…");
+  setStatus("Requesting camera access…");
+
+  // Fire the getUserMedia call (which is what triggers the browser's
+  // permission dialog) immediately, in parallel with the hand-tracking
+  // model download -- previously this awaited the ~1-3s model load first,
+  // so the permission prompt didn't even appear until that finished.
+  const cameraPromise = navigator.mediaDevices.getUserMedia({
+    video: { width: 640, height: 480, facingMode: "user" },
+  });
 
   try {
     if (!handLandmarker) {
+      setStatus("Requesting camera access… (loading hand-tracking model too)");
       await initHandLandmarker();
     }
   } catch (err) {
     console.error(err);
     setStatus("Couldn't load the hand-tracking model. Check your connection and reload.", true);
     startBtn.disabled = false;
+    cameraPromise.then((s) => s.getTracks().forEach((t) => t.stop())).catch(() => {});
     return;
   }
 
-  setStatus("Requesting camera access…");
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 640, height: 480, facingMode: "user" },
-    });
+    stream = await cameraPromise;
   } catch (err) {
     console.error(err);
     setStatus("Camera access denied. Allow camera permission and try again.", true);
@@ -108,6 +141,7 @@ async function startCamera() {
     return;
   }
 
+  mediaStream = stream;
   video.srcObject = stream;
   await video.play();
 
@@ -115,20 +149,73 @@ async function startCamera() {
   overlay.height = video.videoHeight || 480;
 
   cameraOverlayMsg.classList.add("hidden");
+  stopBtn.classList.remove("hidden");
+  isRunning = true;
+  consecutiveFrameErrors = 0;
+  lastHandSeenAt = performance.now();
   warmUpBackend();
-  requestAnimationFrame(detectLoop);
+  animationId = requestAnimationFrame(detectLoop);
+}
+
+function stopCamera() {
+  isRunning = false;
+  if (animationId !== null) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+  if (mediaStream) {
+    mediaStream.getTracks().forEach((track) => track.stop());
+    mediaStream = null;
+  }
+  video.srcObject = null;
+  overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+  subtitleEl.classList.add("hidden");
+  subtitleEl.textContent = "";
+  currentLetterEl.textContent = "—";
+  currentConfidenceEl.textContent = "0%";
+  stableCount = 0;
+  lastPredictedLabel = null;
+  setStatus("");
+  cameraOverlayMsg.classList.remove("hidden");
+  stopBtn.classList.add("hidden");
+  startBtn.disabled = false;
 }
 
 let lastVideoTime = -1;
 
 function detectLoop() {
+  if (!isRunning) return;
+
   if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
     lastVideoTime = video.currentTime;
-    const result = handLandmarker.detectForVideo(video, performance.now());
-    drawLandmarks(result);
-    maybePredict(result);
+    try {
+      const result = handLandmarker.detectForVideo(video, performance.now());
+      consecutiveFrameErrors = 0;
+      drawLandmarks(result);
+      maybePredict(result);
+
+      if (result.landmarks && result.landmarks.length > 0) {
+        lastHandSeenAt = performance.now();
+      } else if (performance.now() - lastHandSeenAt > 5000 && !statusMsg.classList.contains("error")) {
+        setStatus("Can't see a hand — move closer and make sure it's well lit.");
+      }
+    } catch (err) {
+      // A single bad frame must never kill the loop below -- that's what
+      // used to make tracking silently stop working forever after one
+      // WebGL/decoder hiccup. Log it, keep going, and self-heal if it's
+      // the GPU delegate that's the problem.
+      consecutiveFrameErrors += 1;
+      console.error("Hand-tracking frame error:", err);
+      if (consecutiveFrameErrors === 1) {
+        setStatus("Hand tracking hit a snag, recovering…", true);
+      }
+      if (consecutiveFrameErrors === 15 && handLandmarkerDelegate === "GPU") {
+        fallBackToCpuDelegate();
+      }
+    }
   }
-  requestAnimationFrame(detectLoop);
+
+  animationId = requestAnimationFrame(detectLoop);
 }
 
 function drawLandmarks(result) {
@@ -173,13 +260,23 @@ function landmarksToVector(hand) {
 // ---------------------------------------------------------------------------
 
 async function warmUpBackend() {
-  // Render's free tier spins down after inactivity; fire a health check early
-  // so the ~30-50s cold start happens while the user is still getting their
-  // hand positioned, not on their first real prediction.
+  // Render's free tier spins down after inactivity, and the model itself is
+  // lazy-loaded on first use -- fire both off early so that cost lands while
+  // the user is still getting their hand positioned, not on their first real
+  // sign (which is what made the very first letter feel slow before).
   try {
     await fetch(`${API_BASE_URL}/health`);
   } catch {
     // ignore -- the real calls below will surface a proper error state
+  }
+  try {
+    await fetch(`${API_BASE_URL}/predict-vector`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vector: new Array(42).fill(0) }),
+    });
+  } catch {
+    // ignore -- same as above
   }
 }
 
@@ -191,6 +288,7 @@ function maybePredict(result) {
     currentConfidenceEl.textContent = "0%";
     stableCount = 0;
     lastPredictedLabel = null;
+    updateSubtitle(null);
     return;
   }
 
@@ -218,6 +316,15 @@ function maybePredict(result) {
     });
 }
 
+function updateSubtitle(label) {
+  if (!label) {
+    subtitleEl.classList.add("hidden");
+    return;
+  }
+  subtitleEl.textContent = label;
+  subtitleEl.classList.remove("hidden");
+}
+
 function handlePrediction({ label, confidence }) {
   if (statusMsg.classList.contains("error")) setStatus("");
 
@@ -226,11 +333,13 @@ function handlePrediction({ label, confidence }) {
     currentConfidenceEl.textContent = `${Math.round((confidence || 0) * 100)}%`;
     stableCount = 0;
     lastPredictedLabel = null;
+    updateSubtitle(null);
     return;
   }
 
   currentLetterEl.textContent = label;
   currentConfidenceEl.textContent = `${Math.round(confidence * 100)}%`;
+  updateSubtitle(label);
 
   if (label === lastPredictedLabel) {
     stableCount += 1;
@@ -310,6 +419,7 @@ function speakSentence() {
 // ---------------------------------------------------------------------------
 
 startBtn.addEventListener("click", startCamera);
+stopBtn.addEventListener("click", stopCamera);
 buildBtn.addEventListener("click", buildSentence);
 clearBtn.addEventListener("click", clearAll);
 speakBtn.addEventListener("click", speakSentence);

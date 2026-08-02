@@ -9,7 +9,7 @@ This is the real API the mobile app talks to — two small services, both deploy
 flowchart LR
     Mobile["📱 Mobile app"] -->|"POST /predict, /sentence"| API["🖥️ backend/api\n(Render Web Service)"]
     API -->|"run_task('signbridge-sentence-workflow/build_sentence')"| WF["🧠 backend/workflow\n(Render Workflow)"]
-    WF -->|"LLM call, with retries"| LLM["✍️ Gemini / llm7.io"]
+    WF -->|"LLM call, with retries"| LLM["✍️ llm7.io (default) / Gemini (fallback)"]
 ```
 
 - **`api/`** — a FastAPI web service. Handles `POST /predict` (camera frame →
@@ -48,7 +48,8 @@ an Infrastructure-as-Code Blueprint:
 3. Render reads `render.yaml` and creates the `signbridge-api` web service
    pointed at `backend/api`
 4. In the service's **Environment** tab, set:
-   - `GEMINI_API_KEY` (optional — free `llm7.io` backup is used if missing)
+   - `GEMINI_API_KEY` (optional — `llm7.io`, free and keyless, is used by
+     default; Gemini only kicks in as a fallback if llm7 itself errors out)
    - `RENDER_API_KEY` and `RENDER_SENTENCE_TASK_SLUG` (only once the workflow
      below exists — see step 2)
 

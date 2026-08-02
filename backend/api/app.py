@@ -200,7 +200,15 @@ def predict_vector(req: PredictVectorRequest):
     proba = _vector_model.predict_proba([normalized])[0]
     best_idx = int(np.argmax(proba))
     confidence = float(proba[best_idx])
-    if confidence < 0.5:
+    # Threshold is deliberately lower than it looks like it "should" be: the
+    # model was trained on static dataset photos, but this endpoint gets fed
+    # live webcam frames -- a different lighting/lens/motion-blur domain --
+    # so honest confidence runs lower there even on correct guesses. The
+    # frontend's STABILITY_HITS_NEEDED (multiple consecutive agreeing frames)
+    # is what actually filters out noise, so gating hard here just throws
+    # away correct-but-less-confident predictions instead of letting that
+    # mechanism do its job.
+    if confidence < 0.35:
         return PredictResponse(label=None, confidence=confidence)
     return PredictResponse(label=str(_vector_model.classes_[best_idx]), confidence=confidence)
 

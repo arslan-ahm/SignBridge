@@ -3,14 +3,11 @@
 This is the standout feature: "I GO STORE" -> "I'm going to the store."
 
 Provider chain:
-  1. Gemini, if GEMINI_API_KEY is set (best quality).
-  2. llm7.io, a free/anonymous OpenAI-compatible API with no key required
-     (https://llm7.io) -- used automatically when there's no Gemini key, or
-     as a fallback if Gemini itself errors out.
-  3. If llm7's free-tier rate limit is hit *and* no Gemini key is configured,
-     say so plainly rather than silently degrading, since adding a free
-     Gemini key is the actual fix.
-  4. Plain joined words, so the rest of the demo (recognition, voice output)
+  1. llm7.io, a free/anonymous OpenAI-compatible API with no key required
+     (https://llm7.io) -- the default, always tried first, no setup needed.
+  2. Gemini, only as a fallback if llm7 itself errors out AND
+     GEMINI_API_KEY happens to be set.
+  3. Plain joined words, so the rest of the demo (recognition, voice output)
      always keeps working no matter what.
 """
 import json
@@ -63,7 +60,7 @@ def _via_llm7(prompt):
         headers={"Content-Type": "application/json", "Authorization": "Bearer unused"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=10) as response:
+    with urllib.request.urlopen(request, timeout=20) as response:
         payload = json.load(response)
     return payload["choices"][0]["message"]["content"].strip()
 
@@ -77,19 +74,15 @@ def build_sentence(words):
     prompt = PROMPT_TEMPLATE.format(words=" ".join(words))
     fallback = _plain_fallback(words)
 
+    try:
+        return _via_llm7(prompt) or fallback
+    except Exception:
+        pass  # fall through and try Gemini (if configured) before giving up
+
     if _gemini_model:
         try:
             return _via_gemini(prompt) or fallback
         except Exception:
-            pass  # fall through and try the free backup before giving up
+            pass
 
-    try:
-        return _via_llm7(prompt) or fallback
-    except Exception:
-        if not GEMINI_API_KEY:
-            return (
-                f"{fallback}  (⚠ Free AI sentence-building limit reached — "
-                f"add a free GEMINI_API_KEY to SignBridge/.env for reliable results: "
-                f"https://aistudio.google.com/apikey)"
-            )
-        return fallback
+    return fallback

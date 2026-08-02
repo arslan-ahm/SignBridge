@@ -45,7 +45,7 @@ That's the whole trick! Camera → Dots → Letters → Sentence → Voice. 🎉
 | 🌐 Website | ✅ **Live, fully working camera demo** | [signbridge-llm.netlify.app](https://signbridge-llm.netlify.app/) — hand tracking runs in your browser, so it isn't limited by server memory at all — see [`website/README.md`](website/README.md) |
 | 🖥️ Web app (Streamlit) | ✅ **Live on the internet** | [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/) — free, works on any device |
 | 🖥️ Web app (Gradio) | ✅ Works locally | `python app/main.py` on your own computer |
-| ✍️ Sentence builder | ✅ Working | Uses Gemini if you add a key, otherwise free `llm7.io` automatically |
+| ✍️ Sentence builder | ✅ Working | Uses free, keyless `llm7.io` by default; Gemini only as a fallback if you add a key and llm7 itself fails |
 | 🔌 Backend API | ✅ **Live on Render** | `/sentence` (genuine Render Workflow) and the website's `/predict-vector` both work reliably; the older image-based `/predict` needs a bigger (paid) instance — see [`backend/README.md`](backend/README.md) |
 | 📱 Mobile app | 🟡 Built, camera recognition mocked | Sentence-building is genuinely live; camera recognition uses mock data (same memory limit as old `/predict`) |
 | ☁️ Hugging Face Space | 🟡 Ready, not deployed | Needs a paid HF "Pro" plan to host a Python app for free-tier CPU — see its README |
@@ -88,7 +88,7 @@ python extract_landmarks.py
 python model/train.py
 ```
 
-**3️⃣ (Optional) Add a free Gemini key** for extra-smooth sentences — copy `.env.example` to `.env` and paste your key from [aistudio.google.com](https://aistudio.google.com/apikey). No key? No problem — a free backup (`llm7.io`) kicks in automatically. 🆓
+**3️⃣ (Optional) Add a free Gemini key** as a fallback — copy `.env.example` to `.env` and paste your key from [aistudio.google.com](https://aistudio.google.com/apikey). By default, sentence-building always uses the free, keyless `llm7.io` first; Gemini only steps in if that call itself fails. 🆓
 
 **4️⃣ Run the app:**
 ```bash
