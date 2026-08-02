@@ -11,9 +11,10 @@ const API_BASE_URL = "https://signbridge-api-bruo.onrender.com";
 const HAND_LANDMARKER_MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task";
 
-const PREDICT_INTERVAL_MS = 220; // how often we ask the backend for a letter
+const PREDICT_INTERVAL_MS = 150; // how often we ask the backend for a letter
 const STABILITY_HITS_NEEDED = 2; // consecutive matching predictions before we "commit" a letter
 const CONFIDENCE_THRESHOLD = 0.45; // live webcam frames score lower than the dataset photos the model trained on -- STABILITY_HITS_NEEDED is what filters noise, not this
+const AUTO_BUILD_IDLE_MS = 2200; // no hand seen for this long (with letters queued) -> auto-build the sentence
 
 // Standard MediaPipe hand topology (21 landmarks) -- fixed, not exported by the JS package.
 const HAND_CONNECTIONS = [
@@ -62,6 +63,9 @@ let isRunning = false;
 let animationId = null;
 let consecutiveFrameErrors = 0;
 let lastHandSeenAt = 0;
+let streakCommitted = false; // has the CURRENT continuous same-letter streak already been committed?
+let autoBuildTriggered = false; // has this hand-absence episode already auto-built a sentence?
+let voiceCache = [];
 
 function setStatus(text, isError = false) {
   statusMsg.textContent = text;
@@ -153,6 +157,7 @@ async function startCamera() {
   isRunning = true;
   consecutiveFrameErrors = 0;
   lastHandSeenAt = performance.now();
+  autoBuildTriggered = false;
   warmUpBackend();
   animationId = requestAnimationFrame(detectLoop);
 }
@@ -175,6 +180,8 @@ function stopCamera() {
   currentConfidenceEl.textContent = "0%";
   stableCount = 0;
   lastPredictedLabel = null;
+  streakCommitted = false;
+  autoBuildTriggered = false;
   setStatus("");
   cameraOverlayMsg.classList.remove("hidden");
   stopBtn.classList.add("hidden");
@@ -196,6 +203,7 @@ function detectLoop() {
 
       if (result.landmarks && result.landmarks.length > 0) {
         lastHandSeenAt = performance.now();
+        autoBuildTriggered = false; // hand's back -- allow one more auto-build next time it goes away
       } else if (performance.now() - lastHandSeenAt > 5000 && !statusMsg.classList.contains("error")) {
         setStatus("Can't see a hand — move closer and make sure it's well lit.");
       }
@@ -213,6 +221,18 @@ function detectLoop() {
         fallBackToCpuDelegate();
       }
     }
+  }
+
+  // Checked every animation frame (not just on new video frames) so it
+  // fires as soon as the idle window elapses, not on the next camera frame.
+  if (
+    words.length > 0 &&
+    !autoBuildTriggered &&
+    !buildBtn.disabled &&
+    performance.now() - lastHandSeenAt > AUTO_BUILD_IDLE_MS
+  ) {
+    autoBuildTriggered = true;
+    buildSentence();
   }
 
   animationId = requestAnimationFrame(detectLoop);
@@ -288,6 +308,7 @@ function maybePredict(result) {
     currentConfidenceEl.textContent = "0%";
     stableCount = 0;
     lastPredictedLabel = null;
+    streakCommitted = false; // hand's gone -- the next sign, even a repeat, is a fresh streak
     updateSubtitle(null);
     return;
   }
@@ -333,6 +354,7 @@ function handlePrediction({ label, confidence }) {
     currentConfidenceEl.textContent = `${Math.round((confidence || 0) * 100)}%`;
     stableCount = 0;
     lastPredictedLabel = null;
+    streakCommitted = false; // confidence dropped -- the next confident read is a fresh streak
     updateSubtitle(null);
     return;
   }
@@ -346,11 +368,20 @@ function handlePrediction({ label, confidence }) {
   } else {
     lastPredictedLabel = label;
     stableCount = 1;
+    streakCommitted = false; // new letter streak -- e.g. the second "L" in "HELLO" after the "E"
   }
 
-  const alreadyLast = words.length > 0 && words[words.length - 1] === label;
-  if (stableCount === STABILITY_HITS_NEEDED && !alreadyLast) {
+  // Gate on "has THIS streak already been committed", not "is this the same
+  // letter as last time" -- the old check blocked committing the same
+  // letter twice in a row *ever*, which made double letters (the two L's in
+  // "HELLO", the two O's in "BALLOON") impossible to type: the first L
+  // committed, and the second L's streak was silently dropped forever
+  // because it matched the word list's last entry. A streak breaks (and
+  // re-arms) whenever the hand drops out or confidence dips, which happens
+  // naturally between two signs of the same letter.
+  if (stableCount === STABILITY_HITS_NEEDED && !streakCommitted) {
     commitLetter(label);
+    streakCommitted = true;
   }
 }
 
@@ -400,6 +431,8 @@ function clearAll() {
   words = [];
   lastPredictedLabel = null;
   stableCount = 0;
+  streakCommitted = false;
+  autoBuildTriggered = false;
   currentSentence = "";
   renderWordTrail();
   sentenceOut.textContent = 'Sign a few letters, then hit "Build Sentence."';
@@ -407,10 +440,42 @@ function clearAll() {
   speakBtn.disabled = true;
 }
 
+// ---------------------------------------------------------------------------
+// Voice output
+// ---------------------------------------------------------------------------
+
+const FEMALE_VOICE_HINTS = [
+  "female", "zira", "samantha", "susan", "karen", "victoria", "moira",
+  "tessa", "fiona", "hazel", "aria", "jenny", "libby", "google us english",
+  "google uk english female", "microsoft zira", "microsoft aria",
+];
+
+function loadVoices() {
+  voiceCache = window.speechSynthesis.getVoices();
+}
+loadVoices();
+if ("speechSynthesis" in window) {
+  window.speechSynthesis.onvoiceschanged = loadVoices; // Chrome loads voices async
+}
+
+function pickSweetVoice() {
+  const voices = voiceCache.length ? voiceCache : window.speechSynthesis.getVoices();
+  const english = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("en"));
+  const pool = english.length ? english : voices;
+  const match = pool.find((v) =>
+    FEMALE_VOICE_HINTS.some((hint) => v.name.toLowerCase().includes(hint))
+  );
+  return match || pool[0] || null;
+}
+
 function speakSentence() {
   if (!currentSentence) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(currentSentence);
+  const voice = pickSweetVoice();
+  if (voice) utterance.voice = voice;
+  utterance.pitch = 1.15; // warmer, sweeter tone
+  utterance.rate = 0.95; // slightly relaxed, gentle pace
   window.speechSynthesis.speak(utterance);
 }
 
