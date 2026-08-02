@@ -70,21 +70,49 @@ There isn't just *one* way to build a guessing robot — there are many. Early o
 
 ---
 
+## 🚨 The Plot Twist — 98% Wasn't What It Looked Like
+
+Testing a model on photos it saw *the same photoshoot as* is like studying for a test using the exact questions that'll be on it. So we grabbed a **second, totally unrelated ASL photo dataset** (Marxulia's) that the model had never seen even one picture from, and tried it there instead.
+
+```mermaid
+flowchart LR
+    A["Test on the SAME<br/>dataset it trained on"] -->|"99.68% 🎉"| B["Looks amazing!"]
+    C["Test on a totally<br/>DIFFERENT dataset"] -->|"~21% 😬"| D["...it basically<br/>memorized one<br/>photoshoot"]
+```
+
+That gap gave it away: the model wasn't learning *what an A looks like* — it was learning *where in this specific dataset's photos a hand tends to sit, and how big it tends to look*. Change the camera, the background, or how close the hand is, and it got lost.
+
+**The fix had two parts:**
+
+1. **Make the numbers position/size-proof.** Instead of raw dot positions, we shift every hand so the wrist sits at (0,0), then shrink/stretch it so its biggest dot-to-wrist distance is always exactly 1. Now "A" always looks like the same *shape* to the model, no matter where the hand was in the photo or how close the camera was. This lives in `normalize_vector()` inside `features.py`.
+2. **Learn from more than one photoshoot.** Normalization alone actually made things *slightly worse* (16%) — proof the real problem was never having seen more than one dataset's "style" of hand photo. So we merged in the second dataset (8,399 more examples) and retrained on both together.
+
+```mermaid
+flowchart LR
+    A["Raw numbers,<br/>1 dataset"] -->|"~21%"| Z1["❌"]
+    B["Normalized numbers,<br/>1 dataset"] -->|"~16%"| Z2["❌ (still bad!)"]
+    C["Normalized numbers,<br/>2 merged datasets"] -->|"82–98%"| Z3["✅ actually generalizes"]
+```
+
+---
+
 ## 🧠 Meet the Current Model
 
-Here's our robot's report card today:
+Here's our robot's honest report card:
 
 | 📋 | |
 |---|---|
-| 🏷️ **Type** | Random Forest (100 mini-guessers voting together) |
+| 🏷️ **Type** | Random Forest (200 mini-guessers voting together) |
 | 🔤 **Knows these letters** | The full alphabet, A–Z (26 letters) |
-| 🎯 **Accuracy** | ~98% on signs it's never seen before |
+| 🎯 **Accuracy on its own dataset's held-out photos** | 98.4% |
+| 🎯 **Accuracy on a totally different, never-trained-on dataset** | 82.3% |
+| 🎯 **Combined honest accuracy** | 96.5% |
 | ⚡ **Speed** | Fast enough for live video, no lag |
 | 💾 **File** | `model/sign_model.pkl` (also copied into `backend/api/` for the live API) |
 | 📄 **Label list** | `model/labels.json` |
-| 📚 **Learned from** | 60,283 hand examples across all 26 letters |
+| 📚 **Learned from** | 68,681 hand examples, merged from two independent photo datasets |
 
-**Accuracy** just means: out of 100 hand signs it's never seen before, how many did it guess correctly? ~98% means it gets nearly all of them right on the test data — though remember the J/Z caveat above for *live* use, since those two are motion signs squeezed into a still-photo model. 🎯
+We report *both* numbers on purpose instead of just the flattering one — the gap between them is exactly the "does it generalize, or did it just memorize" question, and it's the whole reason this model looks the way it does today. M and N are the weakest letters (~90% each) since they're both fist-shaped and genuinely hard to tell apart, even for people. 🎯
 
 ---
 
@@ -95,8 +123,9 @@ Here's our robot's report card today:
 # 1. Turn a folder of labeled hand photos (data/raw/<LETTER>/*.jpg) into numbers
 python extract_landmarks.py
 
-# 2. Train the Random Forest model on those numbers
-python model/train.py
+# 2. Normalize a second dataset's photos and merge + retrain (see the plot twist above)
+python extract_marxulia_normalized.py
+python retrain_merged.py
 ```
 
-Both scripts write to the same spreadsheet (`data/landmarks/hand_landmarks.csv`) and the same model file (`model/sign_model.pkl`), so you can add more photos and just rerun both steps whenever you want a fresher brain. 🧩
+`retrain_merged.py` writes the final `model/sign_model_merged.pkl` — copy it over `model/sign_model.pkl` and `backend/api/sign_model.pkl` to ship it. `python model/train.py` still works if you want to go back to the single-dataset, un-normalized baseline for comparison, but it's not what's deployed. 🧩

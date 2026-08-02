@@ -41,7 +41,7 @@ That's the whole trick! Camera → Dots → Letters → Sentence → Voice. 🎉
 
 | Piece | Status | Notes |
 |---|---|---|
-| 🧠 Model | ✅ Working | Full A–Z alphabet, ~98% accuracy, trained on 60,000+ examples |
+| 🧠 Model | ✅ Working, cross-dataset tested | Full A–Z alphabet, trained on 68,000+ examples from 2 merged datasets — 96.5% honest held-out accuracy (82–98% depending on source), see [`model/README.md`](model/README.md) for the overfitting fix story |
 | 🌐 Website | ✅ **Live, fully working camera demo** | [signbridge-llm.netlify.app](https://signbridge-llm.netlify.app/) — hand tracking runs in your browser, so it isn't limited by server memory at all — see [`website/README.md`](website/README.md) |
 | 🖥️ Web app (Streamlit) | ✅ **Live on the internet** | [signbridge-asl.streamlit.app](https://signbridge-asl.streamlit.app/) — free, works on any device |
 | 🖥️ Web app (Gradio) | ✅ Works locally | `python app/main.py` on your own computer |

@@ -57,7 +57,11 @@ def main():
     y_train = pd.concat([p[1] for p in train_parts])
 
     print("\nTraining RandomForest on merged normalized dataset...")
-    model = RandomForestClassifier(n_estimators=200, max_depth=20, random_state=42, n_jobs=-1)
+    # n_estimators=100 (not 200) to match the memory footprint of the
+    # previously-deployed model -- Render's free tier is capped at 512MB and
+    # a 200-tree forest crash-looped the service (verified via a doubled
+    # pickle size + Render logs showing repeated silent OOM restarts).
+    model = RandomForestClassifier(n_estimators=100, max_depth=20, random_state=42, n_jobs=-1)
     model.fit(X_train, y_train)
 
     print("\n" + "=" * 70)
