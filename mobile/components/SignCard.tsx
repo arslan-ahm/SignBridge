@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { radius, spacing, useThemeColors } from '../theme/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { fontFamily, radius, shadow, spacing, useThemeColors } from '../theme/theme';
 import { VocabEntry } from '../data/vocabulary';
 
 interface SignCardProps {
@@ -22,6 +23,7 @@ export function SignCard({ word, entry, active }: SignCardProps) {
     <View
       style={[
         styles.card,
+        shadow.sm,
         {
           backgroundColor: colors.surface,
           borderColor: active ? colors.accent : colors.border,
@@ -32,18 +34,25 @@ export function SignCard({ word, entry, active }: SignCardProps) {
       <View
         style={[
           styles.glyphWrap,
-          { backgroundColor: known ? colors.accent + '22' : colors.warning + '22' },
+          { backgroundColor: known ? colors.accentSoft : colors.warningSoft },
         ]}
       >
-        <Text style={styles.glyph}>{known ? entry!.illustration : '❔'}</Text>
+        {known ? (
+          <Text style={styles.glyph}>{entry!.illustration}</Text>
+        ) : (
+          <Ionicons name="help" size={24} color={colors.warning} />
+        )}
       </View>
       <Text style={[styles.word, { color: colors.text }]} numberOfLines={1}>
         {word}
       </Text>
       {!known && (
-        <Text style={[styles.notAvailable, { color: colors.warning }]}>
-          sign not available yet
+        <Text style={[styles.notAvailable, { color: colors.warning }]} numberOfLines={2}>
+          not available yet
         </Text>
+      )}
+      {active && (
+        <View style={[styles.activeDot, { backgroundColor: colors.accent }]} />
       )}
     </View>
   );
@@ -51,31 +60,22 @@ export function SignCard({ word, entry, active }: SignCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    width: 108,
+    width: 104,
     borderRadius: radius.md,
     padding: spacing.sm,
     alignItems: 'center',
     marginRight: spacing.sm,
   },
   glyphWrap: {
-    width: 56,
-    height: 56,
+    width: 52,
+    height: 52,
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
   },
-  glyph: {
-    fontSize: 26,
-  },
-  word: {
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  notAvailable: {
-    fontSize: 10,
-    textAlign: 'center',
-    marginTop: 2,
-  },
+  glyph: { fontSize: 24 },
+  word: { fontSize: 13, fontFamily: fontFamily.semibold, textAlign: 'center' },
+  notAvailable: { fontSize: 10, fontFamily: fontFamily.medium, textAlign: 'center', marginTop: 2 },
+  activeDot: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4 },
 });
