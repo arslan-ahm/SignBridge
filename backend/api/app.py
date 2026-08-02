@@ -29,7 +29,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from features import VECTOR_LENGTH
+from features import VECTOR_LENGTH, normalize_vector
 from sentence_builder import build_sentence
 
 load_dotenv()
@@ -181,10 +181,14 @@ def predict(req: PredictRequest):
 @app.post("/predict-vector", response_model=PredictResponse)
 def predict_vector(req: PredictVectorRequest):
     """Same recognition as /predict, but takes an already-computed 42-number
-    feature vector instead of an image -- meant for callers that already ran
-    hand-landmark detection themselves (e.g. the website, using MediaPipe's
-    in-browser WASM build). This never loads mediapipe/OpenCV server-side,
-    so it stays well within Render's free-tier memory limit."""
+    *raw* landmark vector (flat x0,y0,x1,y1,...,x20,y20 in MediaPipe's 0-1
+    image-relative coordinates) instead of an image -- meant for callers
+    that already ran hand-landmark detection themselves (e.g. the website,
+    using MediaPipe's in-browser WASM build). This never loads mediapipe/
+    OpenCV server-side, so it stays well within Render's free-tier memory
+    limit. Normalization happens here (not client-side) so there's one
+    source of truth instead of keeping a JS and a Python implementation in
+    sync."""
     if len(req.vector) != VECTOR_LENGTH:
         raise HTTPException(
             status_code=400,
@@ -192,7 +196,8 @@ def predict_vector(req: PredictVectorRequest):
         )
 
     _ensure_vector_model_loaded()
-    proba = _vector_model.predict_proba([req.vector])[0]
+    normalized = normalize_vector(req.vector)
+    proba = _vector_model.predict_proba([normalized])[0]
     best_idx = int(np.argmax(proba))
     confidence = float(proba[best_idx])
     if confidence < 0.5:
