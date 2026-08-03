@@ -418,6 +418,18 @@ async function buildSentence() {
     currentSentence = data.sentence || "";
     sentenceOut.textContent = currentSentence || "(empty sentence)";
     speakBtn.disabled = !currentSentence;
+
+    // A built sentence has "consumed" these letters -- leave them in the
+    // buffer and every subsequent sign (after any pause, auto-build or not)
+    // just keeps appending to the same pile, so the next sentence is built
+    // from an ever-growing mix of old and new letters instead of just the
+    // new ones. Reset the trail so the next sign starts a fresh word/sentence,
+    // exactly like clicking "Clear" would, but automatic.
+    words = [];
+    lastPredictedLabel = null;
+    stableCount = 0;
+    streakCommitted = false;
+    renderWordTrail();
   } catch (err) {
     console.error(err);
     sentenceOut.textContent = "Couldn't reach the sentence-building service. Try again in a moment.";
